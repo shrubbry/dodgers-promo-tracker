@@ -75,6 +75,8 @@ def main():
 if __name__ == "__main__":
     main()
     print("Manual test: calling fetch_emails() outside of promo block")
-    emails = fetch_emails()
-    print("Fetched emails (manual test):", emails)
-
+    try:
+        emails = fetch_emails()
+        print("Fetched emails (manual test):", emails)
+    except Exception as e:
+        print("ERROR during fetch_emails:", e)
