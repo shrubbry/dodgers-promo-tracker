@@ -1,10 +1,22 @@
-
-import requests
-import datetime
+import requests, datetime, smtplib
+from email.mime.text import MIMEText
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import os
 
 # MLB team IDs
 DODGERS_ID = 119
 ANGELS_ID = 108
+
+# Google Sheet setup
+SHEET_NAME = 'Dodgers-Angels Promo Alerts (Responses)'  # Tab name
+SPREADSHEET_ID = '1e9ujE14dzkqtiYgKuI6nZfMNXPDpLgFIfZ88dr-kp14'
+
+# Email credentials (set via GitHub Secrets)
+SMTP_SERVER = "smtp-relay.brevo.com"
+SMTP_PORT = 587
+SMTP_USER = os.environ["BREVO_EMAIL"]
+SMTP_PASS = os.environ["BREVO_PASS"]
 
 def check_team_result(team_id):
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
@@ -16,27 +28,47 @@ def check_team_result(team_id):
     try:
         game = data['dates'][0]['games'][0]
     except (IndexError, KeyError):
-        print(f"No game found for team {team_id} on {date_str}")
         return None
 
     team_side = 'home' if game['teams']['home']['team']['id'] == team_id else 'away'
     win = game['teams'][team_side].get('isWinner', False)
     return win
 
+def fetch_emails():
+    scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
+    gc = gspread.authorize(creds)
+    sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
+    return sheet.col_values(2)[1:]  # Skip header
+
+def send_emails(message, recipients):
+    msg = MIMEText(message)
+    msg["Subject"] = "Dodgers/Angels Promotion Alert"
+    msg["From"] = SMTP_USER
+    msg["To"] = ", ".join(recipients)
+
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SMTP_USER, recipients, msg.as_string())
+
 def main():
     dodgers_win = check_team_result(DODGERS_ID)
     angels_win = check_team_result(ANGELS_ID)
 
-    print("==== Promo Results ====")
+    promos = []
     if dodgers_win:
-        print("Dodgers Win! Panda Express promo active.")
-    else:
-        print("Dodgers lost or didn’t play.")
-
+        promos.append("Dodgers Win! Panda Express promo active.")
     if angels_win:
-        print("Angels Win! McDonald's fries promo active.")
+        promos.append("Angels Win! McDonald's fries promo active.")
+
+    if promos:
+        emails = fetch_emails()
+        message = "\n".join(promos)
+        send_emails(message, emails)
+        print(f"Sent to {len(emails)} subscribers.")
     else:
-        print("Angels lost or didn’t play.")
+        print("No promotions triggered.")
 
 if __name__ == "__main__":
     main()
