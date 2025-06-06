@@ -1,3 +1,5 @@
+print("SCRIPT STARTING: top-level code is executing")
+
 import requests, datetime, smtplib
 from email.mime.text import MIMEText
 import gspread
