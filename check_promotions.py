@@ -36,11 +36,24 @@ def check_team_result(team_id):
 
 def fetch_emails():
     print("Running fetch_emails()...")
+
+    print("Setting scope...")
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
+
+    print("Loading creds...")
     creds = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
+
+    print("Authorizing gspread...")
     gc = gspread.authorize(creds)
+
+    print("Opening sheet...")
     sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
-    return sheet.col_values(2)[1:]  # Skip header
+
+    print("Fetching col values...")
+    result = sheet.col_values(2)[1:]
+
+    print("Returning email list...")
+    return result
 
 def send_emails(message, recipients):
     msg = MIMEText(message)
