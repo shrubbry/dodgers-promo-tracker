@@ -35,6 +35,7 @@ def check_team_result(team_id):
     return win
 
 def fetch_emails():
+    print("Running fetch_emails()...")
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
     creds = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
     gc = gspread.authorize(creds)
