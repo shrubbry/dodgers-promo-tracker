@@ -72,5 +72,9 @@ def main():
     else:
         print("No promotions triggered.")
 
+print("Manual test: calling fetch_emails() outside of promo block")
+emails = fetch_emails()
+print("Fetched emails (manual test):", emails)
+
 if __name__ == "__main__":
     main()
