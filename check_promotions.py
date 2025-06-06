@@ -86,10 +86,14 @@ def main():
         print("No promotions triggered.")
 
 if __name__ == "__main__":
-    main()
+    print("Manual test: checking if creds.json exists...")
+    print("creds.json exists?", os.path.exists("creds.json"))
+
     print("Manual test: calling fetch_emails() outside of promo block")
     try:
         emails = fetch_emails()
         print("Fetched emails (manual test):", emails)
     except Exception as e:
         print("ERROR during fetch_emails:", e)
+
+    main()
