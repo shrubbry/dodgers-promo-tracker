@@ -64,6 +64,7 @@ def main():
 
     if promos:
         emails = fetch_emails()
+        print("Fetched emails:", emails)
         message = "\n".join(promos)
         send_emails(message, emails)
         print(f"Sent to {len(emails)} subscribers.")
