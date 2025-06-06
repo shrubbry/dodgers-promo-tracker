@@ -12,6 +12,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Write Google creds.json from secret
+        run: |
+          echo "$GOOGLE_CREDS_JSON" > creds.json
+        env:
+          GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
