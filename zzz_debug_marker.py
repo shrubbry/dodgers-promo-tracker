@@ -1,3 +1,4 @@
+print("SCRIPT STARTING: zzz_debug_marker.py is running")
 print("SCRIPT STARTING: top-level code is executing")
 
 import requests, datetime, smtplib
