@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "lasportspromonotifier",
+  "private_key_id": "aabcb99544a038ea5f011af83419509682ec0163",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDVn77Kfcfm6f33\n7Ijvc3hE8OL+CsW0EKaZJxsB+8S+V8XgQEbQaeQLNLPKEfgsT2Nc0+xkLjVNc0cF\nbQQLiylhpJ7eHJjsg8gcfsBBgLfwrz6lBbRZFXgLY2NsuZCjVypLxVwR2R2wREdT\n4Jhb6oK5Im4TsI9VOa1ijIOecwHm88yTWlM0s8pZjMg6x3CiX67mOb/0q0b21A4V\nKK8pPzD7pXb4Sj2qGVGWKut7fz+34syVU2AJgHDM409jcqiYiHM94G7r5/Ph7M6h\ndaIsMTIvGcDSChfNZpz+ASL+JPMb9ulkr8dSv5wIZPbb0NnwjOkJiAtS4CFk27Fg\nJHJ/+3b9AgMBAAECggEAJltAt1x2wnIksPmWS8JEp8JFy531CiQMOccQ/R3u4Uti\nwuVfoafFs7JijseDszcM7Pu7P/ChDvdCGwoMNiNmSnszsEdbuOnfiihDDm/VdyCM\nI7a+v1kQvSC7FyhJfV6XAFRfN/AvOblEwl17FdPpZWL2d1AWKFQLGv0GW/Kj9orf\nZ4PcnW8X2/3gChcePkJFr4vcvr9hpHqmUvwwabAvSXzoUQN+nurq10VaLW1MsI2t\n1RCqW45f1yGuuDfC6tJOtw2nnXc7Sp0nt3PkOZunI5b2R10JGPQB1lJG3Zy9ZN1E\nyMaG7nAjjPWh7qcS4WfgSeJrGM9oAz0E5zD7rNjYgQKBgQDq/xr/wxEEJNYO98Xm\nuwWaF84WW7/0Kwvp+MVjww53MAr1Jv5tbdvKN37hOWHrW6DlS6UXhXwLMsHDjtuY\nIcqYXgztNBPjg4bBpGKchD88RbLUMpWrTA02EiRXI1ddN51dnjcBP+aGkhzNdzh7\n7z3otK6Xr6fxSDHygc5GWyVPfQKBgQDot58CI06Kz+ZqgiGJ9fXRWNv9V4q0ge1W\nBSGUViNj6wDJ1xZQcPEUm0XL936RVpZs3vMJgIlmbyAx94eOJztkoydMi6by4Jrx\nCT55dDxIPUcDHFsg9G614WaxkNrCGhe7pZe+Sprzcgvm4XyctxcbkwQgCE4uUyuW\nx6BmIuZdgQKBgQDKLwbJuskvKYpKgn9wzsQ5GfYkYng62bZ8bZ9XAAG4JkunNQ9+\nkyChUTIHEVngJ4u8/GJkZGKfN+JiIM1qjNhEU9cHVuEtxIHypT56r4XAk68Sxxri\nsKJFPUKq/isydqEcZP2qQ5JRgfDqDoM4jlRTnPECbQ0vmQ/wOCKDgfQN+QKBgHZ6\n9fOKsjQuAKt9MUIh/VLmIKps5WtdMs42so/pAv+d57rbTLsLpVHOc8ySZtfr843e\nPHI8BLgoH4YQ9ezDwJNOFXX9K7Q/8eKByFLhgMdumzbUOvkeOTdUWIpSq21jB247\nsnPpW9ZR3AliB6Vp+dPKF7GPSO6A3ZJYdCtL3WkBAoGASJpLOCEX6KQcF1NaO7B4\nw/3nSrDDbBkSo2sOhJL7y8oteIMzJFjpsFAodrrQsTJUrJlESs88aOUu5N/NJGEh\nmnYidCiARANGuEDgiy9GWQLvqk0POD10XAaPShPtj0bNByLCp0wx5oJCUKaXrKll\nBb5k1A2jnUi5fBEEgf5SqR0=\n-----END PRIVATE KEY-----\n",
+  "client_email": "sheets-reader@lasportspromonotifier.iam.gserviceaccount.com",
+  "client_id": "106191140912733310008",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sheets-reader%40lasportspromonotifier.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
