@@ -20,6 +20,7 @@ SMTP_SERVER = "smtp-relay.brevo.com"
 SMTP_PORT = 587
 SMTP_USER = os.environ["BREVO_EMAIL"]
 SMTP_PASS = os.environ["BREVO_PASS"]
+SMTP_SENDER = os.environ["BREVO_SENDER"]
 
 def check_team_result(team_id):
     yesterday = datetime.date.today() - datetime.timedelta(days=1)
@@ -61,7 +62,7 @@ def fetch_emails():
 def send_emails(message, recipients):
     msg = MIMEText(message)
     msg["Subject"] = "Dodgers/Angels Promotion Alert"
-    msg["From"] = SMTP_USER
+    msg["From"] = SMTP_SENDER
     msg["To"] = ", ".join(recipients)
 
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
