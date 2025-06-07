@@ -27,4 +27,7 @@ jobs:
         run: pip install requests gspread oauth2client
 
       - name: Run promotion check
-        run: python zzz_debug_marker.py 
+        run: python zzz_debug_marker.py
+        env:
+          BREVO_EMAIL: ${{ secrets.BREVO_EMAIL }}
+          BREVO_PASS: ${{ secrets.BREVO_PASS }}
