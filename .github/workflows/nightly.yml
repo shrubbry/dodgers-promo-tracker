@@ -31,3 +31,4 @@ jobs:
         env:
           BREVO_EMAIL: ${{ secrets.BREVO_EMAIL }}
           BREVO_PASS: ${{ secrets.BREVO_PASS }}
+          BREVO_SENDER: ${{ secrets.BREVO_SENDER }}
