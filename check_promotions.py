@@ -1,89 +1,79 @@
-import requests, datetime, smtplib, os
+import datetime
+import requests
+import smtplib
+import os
 from email.mime.text import MIMEText
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # === Config ===
-DODGERS_ID = 119
-ANGELS_ID = 108
-
-SPREADSHEET_ID = '1e9ujE14dzkqtiYgKuI6nZfMNXPDpLgFIfZ88dr-kp14'
-
+SPREADSHEET_ID = "1e9ujE14dzkqtiYgKuI6nZfMNXPDpLgFIfZ88dr-kp14"
 SMTP_SERVER = "smtp-relay.brevo.com"
 SMTP_PORT = 587
 SMTP_USER = os.environ["BREVO_EMAIL"]
 SMTP_PASS = os.environ["BREVO_PASS"]
 SMTP_SENDER = os.environ["BREVO_SENDER"]
 
-# === Team + Promo Definitions ===
+# === Promo Definitions ===
 TEAMS = {
     "Dodgers": {
-        "id": DODGERS_ID,
+        "id": 119,
         "promos": [
-            {
-                "name": "Panda Express: Win = Free Bowl",
-                "trigger": lambda g: g.get("is_winner", False),
-            },
-            {
-                "name": "AMPM: Score 7+ Runs = $1 Coffee",
-                "trigger": lambda g: g.get("team_score", 0) >= 7,
-            },
-            {
-                "name": "McDonald's: 10+ Strikeouts = Free 6pc McNuggets",
-                "trigger": lambda g: g.get("pitcher_strikeouts", 0) >= 10,
-            },
-        ],
+            {"name": "Panda Express (Win at Home)", "trigger": lambda g: g.get("is_winner") and g.get("home")},
+            {"name": "McDonald’s (6+ runs)", "trigger": lambda g: g.get("team_score", 0) >= 6},
+            {"name": "ampm (Steal a base at home)", "trigger": lambda g: g.get("stolen_bases", 0) >= 1 and g.get("home")},
+            {"name": "Jack in the Box (7+ strikeouts)", "trigger": lambda g: g.get("pitcher_strikeouts", 0) >= 7},
+        ]
     },
     "Angels": {
-        "id": ANGELS_ID,
+        "id": 108,
         "promos": [
-            {
-                "name": "McDonald’s: Score in 1st inning = Free 6pc McNuggets",
-                "trigger": lambda g: (g.get("scored_by_inning") or [0])[0] > 0,
-            },
-            {
-                "name": "Del Taco: Win = Free Tacos",
-                "trigger": lambda g: g.get("is_winner", False),
-            },
-        ],
-    },
+            {"name": "McDonald’s (Win)", "trigger": lambda g: g.get("is_winner")},
+            {"name": "Del Taco (Score 5+ runs at home)", "trigger": lambda g: g.get("team_score", 0) >= 5 and g.get("home")},
+        ]
+    }
 }
 
-# === Result Fetching ===
-def fetch_team_result(team_id):
-    date = datetime.date.today() - datetime.timedelta(days=1)
-    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}&teamId={team_id}&hydrate=team,linescore"
-    r = requests.get(url)
-    data = r.json()
-
-    try:
-        game = data["dates"][0]["games"][0]
-        linescore = game.get("linescore", {})
-        team_data = game["teams"]["home"] if game["teams"]["home"]["team"]["id"] == team_id else game["teams"]["away"]
-        opp_data = game["teams"]["away"] if team_data == game["teams"]["home"] else game["teams"]["home"]
-
-        innings = linescore.get("innings", [])
-        scored_by_inning = [inning.get(team_data["team"]["name"].lower(), 0) for inning in innings]
-
-        return {
-            "team_score": team_data["score"],
-            "opponent_score": opp_data["score"],
-            "is_winner": team_data.get("isWinner", False),
-            "opponent": opp_data["team"]["name"],
-            "scored_by_inning": scored_by_inning,
-            "pitcher_strikeouts": linescore.get("teams", {}).get("home" if team_data == game["teams"]["home"] else "away", {}).get("pitchers", [{}])[0].get("strikeOuts", 0)
-        }
-    except (IndexError, KeyError):
-        return None
-
-# === Email Handling ===
+# === Email Fetch ===
 def fetch_emails():
+    print("Fetching subscriber emails...")
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
     creds = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
     gc = gspread.authorize(creds)
     sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
-    return sheet.col_values(2)[1:]  # skip header
+    return sheet.col_values(2)[1:]  # skip header row
 
+# === Game Result Fetch ===
+def fetch_team_result(team_id):
+    date = datetime.date.today() - datetime.timedelta(days=1)
+    date_str = date.strftime('%Y-%m-%d')
+    r = requests.get(f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date_str}&teamId={team_id}')
+    data = r.json()
+    try:
+        game = data['dates'][0]['games'][0]
+        box = requests.get(f"https://statsapi.mlb.com/api/v1/game/{game['gamePk']}/boxscore").json()
+    except (IndexError, KeyError):
+        return None
+
+    is_home = game['teams']['home']['team']['id'] == team_id
+    team_side = 'home' if is_home else 'away'
+    opp_side = 'away' if is_home else 'home'
+
+    team_stats = box['teams'][team_side]['teamStats']['batting']
+    pitching_stats = box['teams'][team_side]['teamStats']['pitching']
+    score = game['teams'][team_side]['score']
+    opp = game['teams'][opp_side]['team']['name']
+
+    return {
+        "team_score": score,
+        "is_winner": game['teams'][team_side].get('isWinner', False),
+        "opponent": opp,
+        "home": is_home,
+        "stolen_bases": team_stats.get('stolenBases', 0),
+        "pitcher_strikeouts": pitching_stats.get('strikeOuts', 0)
+    }
+
+# === Email Sender ===
 def send_emails(subject, body, recipients):
     msg = MIMEText(body)
     msg["Subject"] = subject
@@ -95,59 +85,47 @@ def send_emails(subject, body, recipients):
         server.login(SMTP_USER, SMTP_PASS)
         server.sendmail(SMTP_SENDER, recipients, msg.as_string())
 
-# === Main Flow ===
+# === Main Routine ===
 def main():
     print("SCRIPT STARTING: top-level code is executing")
     today = datetime.date.today()
-    game_date = today - datetime.timedelta(days=1)
-    game_date_str = game_date.strftime('%A, %B %d')
+    yesterday = today - datetime.timedelta(days=1)
+    date_label = yesterday.strftime('%A, %B %d')
 
-    email_lines = [f"Games played: {game_date_str}", ""]
-    triggered_promos = []
-    team_results = {}
+    email_lines = [f"Games played: {date_label}\n"]
+    promos_triggered = []
 
-    for team_name, team_data in TEAMS.items():
-        result = fetch_team_result(team_data["id"])
-        team_results[team_name] = result
-
+    for team_name, team_info in TEAMS.items():
+        print(f"Checking results for {team_name}...")
+        result = fetch_team_result(team_info["id"])
         if not result:
-            email_lines.append(f"{team_name} game was postponed or not played.")
+            email_lines.append(f"{team_name} game was postponed or not played.\n")
             continue
 
-        opponent = result.get("opponent", "Unknown")
-        scoreline = f"{result.get('team_score', '?')}–{result.get('opponent_score', '?')}"
-        outcome = "won" if result.get("is_winner") else "lost"
-        email_lines.append(f"{team_name} {outcome} vs. {opponent} ({scoreline})")
+        game_line = f"{team_name} {'won' if result['is_winner'] else 'lost'} vs. {result['opponent']} ({result['team_score']} runs)"
+        email_lines.append(game_line)
 
-        for promo in team_data["promos"]:
-            try:
-                active = promo["trigger"](result)
-                email_lines.append(f"* {promo['name']}? {'Y' if active else 'N'}")
-                if active:
-                    triggered_promos.append(promo["name"])
-            except Exception as e:
-                email_lines.append(f"* {promo['name']}? Error evaluating promo")
+        for promo in team_info["promos"]:
+            active = promo["trigger"](result)
+            status = "✅" if active else "✖️"
+            line = f"  {status} {promo['name']}"
+            email_lines.append(line)
+            if active:
+                promos_triggered.append(f"{team_name}: {promo['name']}")
 
-        email_lines.append("")
+        email_lines.append("")  # blank line between teams
 
-    if not triggered_promos:
-        print("No promotions triggered. Email will not be sent.")
-        print("\n".join(email_lines))
-        return
-
-    subject_line = f"{len(triggered_promos)} Promos! (Games played: {game_date_str})"
-    body = "\n".join([
-        f"{len(triggered_promos)} promotion{'s' if len(triggered_promos) != 1 else ''} triggered!",
-        *email_lines
-    ])
-
-    print("==== Email Content ====")
-    print(f"Subject: {subject_line}")
-    print(body)
-
-    recipients = fetch_emails()
-    send_emails(subject_line, body, recipients)
-    print(f"Email sent to {len(recipients)} recipients.")
+    if promos_triggered:
+        subject = f"Promo Alert – {len(promos_triggered)} Triggered!"
+        email_body = "\n".join(email_lines)
+        print("==== Email Content ====")
+        print("Subject:", subject)
+        print(email_body)
+        emails = fetch_emails()
+        send_emails(subject, email_body, emails)
+        print(f"Email sent to {len(emails)} recipients.")
+    else:
+        print("No promos triggered – no email sent.")
 
 if __name__ == "__main__":
     main()
