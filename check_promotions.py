@@ -3,134 +3,115 @@ from email.mime.text import MIMEText
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# === TEAM INFO ===
-DODGERS_ID = 119
-ANGELS_ID = 108
-TEAM_NAMES = {
-    DODGERS_ID: "Dodgers",
-    ANGELS_ID: "Angels"
+print("SCRIPT STARTING: top-level code is executing")
+
+TEAMS = {
+    "Dodgers": {
+        "id": 119,
+        "promos": [
+            {"name": "Panda Express: Win = Free Bowl", "trigger": lambda g: g.get("isWinner") is True},
+            {"name": "Jack in the Box: Score 6+ runs = Free Tiny Tacos", "trigger": lambda g: g.get("score", 0) >= 6},
+            {"name": "McDonald’s: Score in 1st inning = Free 6pc McNuggets", "trigger": lambda g: g.get("scored_by_inning", [0])[0] > 0},
+            {"name": "AMPM: HR in 8th+ inning = Free Hot Dog", "trigger": lambda g: any(i >= 8 for i in g.get("homeRuns", []))}
+        ]
+    },
+    "Angels": {
+        "id": 108,
+        "promos": [
+            {"name": "McDonald’s: Win = Free Medium Fries", "trigger": lambda g: g.get("isWinner") is True},
+            {"name": "Del Taco: Score 6+ runs = Free Tacos", "trigger": lambda g: g.get("score", 0) >= 6}
+        ]
+    }
 }
 
-# === GOOGLE SHEET CONFIG ===
 SPREADSHEET_ID = '1e9ujE14dzkqtiYgKuI6nZfMNXPDpLgFIfZ88dr-kp14'
 
-# === EMAIL CONFIG (via GitHub Secrets) ===
 SMTP_SERVER = "smtp-relay.brevo.com"
 SMTP_PORT = 587
-smtp_user = os.environ["BREVO_EMAIL"]
-smtp_pass = os.environ["BREVO_PASS"]
-smtp_sender = os.environ["BREVO_SENDER"]
+SMTP_USER = os.environ["BREVO_EMAIL"]
+SMTP_PASS = os.environ["BREVO_PASS"]
+SMTP_SENDER = os.environ["BREVO_SENDER"]
 
-# === RESULT STRUCTURE ===
-class GameResult:
-    def __init__(self, team_name, opponent, team_score, opp_score, status, is_winner=None):
-        self.team_name = team_name
-        self.opponent = opponent
-        self.team_score = team_score
-        self.opp_score = opp_score
-        self.status = status  # "F" (Final), "PPD" (Postponed), etc.
-        self.is_winner = is_winner
-
-    def summary(self):
-        if self.status != "F":
-            return f"{self.team_name} game was {self.status.lower()}."
-        outcome = "won" if self.is_winner else "lost"
-        return f"{self.team_name} {outcome} vs {self.opponent} ({self.team_score}–{self.opp_score})"
-
-def get_game_result(team_id):
-    date = datetime.date.today() - datetime.timedelta(days=1)
-    date_str = date.strftime('%Y-%m-%d')
-    url = f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date_str}&teamId={team_id}'
+def check_team_result(team_id):
+    yesterday = datetime.date.today() - datetime.timedelta(days=1)
+    date_str = yesterday.strftime('%Y-%m-%d')
+    url = f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date_str}&teamId={team_id}&expand=schedule.linescore'
     r = requests.get(url)
     data = r.json()
 
     try:
         game = data['dates'][0]['games'][0]
+        linescore = game.get("linescore", {})
     except (IndexError, KeyError):
-        return None  # No game played
+        return None
 
-    teams = game['teams']
-    status = game['status']['statusCode']
-    is_home = teams['home']['team']['id'] == team_id
-    team_side = 'home' if is_home else 'away'
-    opp_side = 'away' if is_home else 'home'
+    team_home = game['teams']['home']['team']['id'] == team_id
+    team_data = game['teams']['home'] if team_home else game['teams']['away']
+    opponent_data = game['teams']['away'] if team_home else game['teams']['home']
 
-    team_score = teams[team_side]['score']
-    opp_score = teams[opp_side]['score']
-    opponent = teams[opp_side]['team']['name']
+    scored_by_inning = linescore.get('innings', [])
+    runs_per_inning = [
+        inning[('home' if team_home else 'away')].get('runs', 0)
+        for inning in scored_by_inning
+    ]
+    home_run_innings = [
+        i + 1 for i, inning in enumerate(runs_per_inning)
+        if inning >= 1 and 'homeRuns' in linescore  # defensive
+    ]
 
-    is_winner = teams[team_side].get('isWinner')
-
-    return GameResult(
-        team_name=TEAM_NAMES[team_id],
-        opponent=opponent,
-        team_score=team_score,
-        opp_score=opp_score,
-        status=status,
-        is_winner=is_winner
-    )
+    return {
+        "isWinner": team_data.get("isWinner", False),
+        "score": team_data.get("score", 0),
+        "opponent": opponent_data['team']['name'],
+        "opponent_score": opponent_data.get("score", 0),
+        "homeRuns": home_run_innings,
+        "scored_by_inning": runs_per_inning
+    }
 
 def fetch_emails():
     scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
     creds = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
     gc = gspread.authorize(creds)
     sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
-    emails = sheet.col_values(2)[1:]
-    return [e.strip() for e in emails if e.strip()]
+    return sheet.col_values(2)[1:]
 
-def build_email(result_dodgers, result_angels):
-    lines = []
-    subject_tags = []
-
-    if result_dodgers:
-        lines.append(result_dodgers.summary())
-        if result_dodgers.is_winner:
-            lines.append("→ Panda Express promo active!")
-            subject_tags.append("Dodgers Win")
-
-    if result_angels:
-        lines.append(result_angels.summary())
-        if result_angels.is_winner:
-            lines.append("→ McDonald's fries promo active!")
-            subject_tags.append("Angels Win")
-
-    date_line = f"Games played: {(datetime.date.today() - datetime.timedelta(days=1)).strftime('%A, %B %d')}"
-    subject = f"{' + '.join(subject_tags) or 'No Promos'} ({date_line})"
-
-    return subject, "\n".join([date_line, ""] + lines)
-
-def send_emails(subject, message, recipients):
-    msg = MIMEText(message)
+def send_emails(subject, body, recipients):
+    msg = MIMEText(body)
     msg["Subject"] = subject
-    msg["From"] = smtp_sender
+    msg["From"] = SMTP_SENDER
     msg["To"] = ", ".join(recipients)
 
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
         server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.sendmail(smtp_sender, recipients, msg.as_string())
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SMTP_SENDER, recipients, msg.as_string())
 
 def main():
-    result_dodgers = get_game_result(DODGERS_ID)
-    result_angels = get_game_result(ANGELS_ID)
+    date_played = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%A, %B %d")
+    email_lines = [f"Games played: {date_played}", ""]
 
-    if not result_dodgers and not result_angels:
-        print("No games played yesterday.")
-        return
+    any_promos = False
+    for team_name, info in TEAMS.items():
+        result = check_team_result(info["id"])
+        if not result:
+            email_lines.append(f"{team_name} game was postponed or unavailable.")
+            continue
 
-    subject, body = build_email(result_dodgers, result_angels)
-    print("==== Email Content ====")
-    print(f"Subject: {subject}")
-    print(body)
+        line = f"{team_name} {'won' if result['isWinner'] else 'lost'} vs {result['opponent']} ({result['score']}–{result['opponent_score']})"
+        email_lines.append(line)
 
+        for promo in info["promos"]:
+            if promo["trigger"](result):
+                email_lines.append(f"  ✅ {promo['name']}")
+                any_promos = True
+
+    subject = ("Today's Promos!" if any_promos else "No Promos") + f" (Games played: {date_played})"
     recipients = fetch_emails()
-    if not recipients:
-        print("No subscribers found. Skipping email send.")
-        return
-
-    send_emails(subject, body, recipients)
+    send_emails(subject, "\n".join(email_lines), recipients)
+    print("==== Email Content ====")
+    print("Subject:", subject)
+    print("\n".join(email_lines))
     print(f"Email sent to {len(recipients)} recipients.")
 
 if __name__ == "__main__":
-    print("SCRIPT STARTING: top-level code is executing")
     main()
