@@ -9,19 +9,37 @@ TEAMS = {
     "Dodgers": {
         "id": 119,
         "promos": [
-            {"name": "Panda Express: Win = Free Bowl", "trigger": lambda g: g.get("isWinner") is True},
-            {"name": "Jack in the Box: Score 6+ runs = Free Tiny Tacos", "trigger": lambda g: g.get("score", 0) >= 6},
-            {"name": "McDonald’s: Score in 1st inning = Free 6pc McNuggets", "trigger": lambda g: g.get("scored_by_inning", [0])[0] > 0},
-            {"name": "AMPM: HR in 8th+ inning = Free Hot Dog", "trigger": lambda g: any(i >= 8 for i in g.get("homeRuns", []))}
-        ]
+            {
+                "name": "Panda Express: Dodgers Win = Free Bowl",
+                "trigger": lambda g: g.get("is_winner") is True,
+            },
+            {
+                "name": "AMPM: Dodgers Score > 7",
+                "trigger": lambda g: g.get("team_score", 0) > 7,
+            },
+            {
+                "name": "McDonald's: Score in 1st inning = Free 6pc McNuggets",
+                "trigger": lambda g: g.get("scored_by_inning") and g["scored_by_inning"][0:1] and g["scored_by_inning"][0] > 0,
+            },
+        ],
     },
     "Angels": {
         "id": 108,
         "promos": [
-            {"name": "McDonald’s: Win = Free Medium Fries", "trigger": lambda g: g.get("isWinner") is True},
-            {"name": "Del Taco: Score 6+ runs = Free Tacos", "trigger": lambda g: g.get("score", 0) >= 6}
-        ]
-    }
+            {
+                "name": "McDonald’s: Angels Win = Free Medium Fries",
+                "trigger": lambda g: g.get("is_winner") is True,
+            },
+            {
+                "name": "Del Taco: Angels Score > 7",
+                "trigger": lambda g: g.get("team_score", 0) > 7,
+            },
+            {
+                "name": "McDonald's: Score in 1st inning = Free 6pc McNuggets",
+                "trigger": lambda g: g.get("scored_by_inning") and g["scored_by_inning"][0:1] and g["scored_by_inning"][0] > 0,
+            },
+        ],
+    },
 }
 
 SPREADSHEET_ID = '1e9ujE14dzkqtiYgKuI6nZfMNXPDpLgFIfZ88dr-kp14'
