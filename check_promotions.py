@@ -2,14 +2,17 @@ import requests
 import datetime
 import os
 
+# Get today's date for querying MLB API
 TODAY = datetime.date.today()
 MLB_API_BASE = "https://statsapi.mlb.com/api/v1"
 
+# Team IDs used by MLB API
 TEAMS = {
     "Dodgers": 119,
     "Angels": 108,
 }
 
+# Promotion rules for each team, based on game outcomes and stats
 PROMOS = {
     "Dodgers": [
         {"name": "Panda Express", "condition": lambda game: game['home'] and game['won']},
@@ -23,6 +26,9 @@ PROMOS = {
     ],
 }
 
+# Sends email using Brevo's transactional email API
+# Requires BREVO_API_KEY to be set in the environment
+# Note: this is a single-recipient example; you'll extend for multiple subscribers later
 def send_email(subject, html_content):
     api_key = os.environ.get("BREVO_API_KEY")
     if not api_key:
@@ -49,14 +55,17 @@ def send_email(subject, html_content):
         raise RuntimeError(f"Email failed: {response.status_code} - {response.text}")
     print("Email sent.")
 
+# Query MLB schedule endpoint for today's game(s) for a given team
 def fetch_team_games(team_id):
     url = f"{MLB_API_BASE}/schedule?sportId=1&teamId={team_id}&date={TODAY}"
     return requests.get(url).json()
 
+# Query MLB boxscore endpoint for a given gamePk
 def fetch_boxscore(game_id):
     url = f"{MLB_API_BASE}/game/{game_id}/boxscore"
     return requests.get(url).json()
 
+# Evaluate which promos triggered for a specific team, based on schedule + boxscore
 def evaluate_promos(team_name, team_id):
     schedule = fetch_team_games(team_id)
     games = schedule.get("dates", [])
@@ -69,13 +78,16 @@ def evaluate_promos(team_name, team_id):
     opp_info = game_data['teams']['away'] if is_home else game_data['teams']['home']
 
     runs = team_info['score']
-    won = team_info['isWinner']
+    # Some MLB schedule responses omit 'isWinner' even after games end
+    won = team_info.get('isWinner', team_info['score'] > opp_info['score'])
     game_id = game_data['gamePk']
 
     boxscore = fetch_boxscore(game_id)
+    # Player stats used for steals and strikeouts
     players = boxscore['teams']['home' if is_home else 'away']['players']
-
     steals = sum(p.get('stats', {}).get('batting', {}).get('stolenBases', 0) for p in players.values())
+
+    # Opponent pitching stats used to total strikeouts
     pitching = boxscore['teams']['home' if not is_home else 'away']['players']
     strikeouts = sum(p.get('stats', {}).get('pitching', {}).get('strikeOuts', 0) for p in pitching.values())
 
@@ -87,6 +99,7 @@ def evaluate_promos(team_name, team_id):
         'strikeouts': strikeouts,
     }
 
+    # Evaluate all promo conditions for this team
     active_promos = []
     for promo in PROMOS[team_name]:
         if promo['condition'](summary):
@@ -97,6 +110,7 @@ def evaluate_promos(team_name, team_id):
     triggered = [p for p in active_promos if '✅' in p]
     return triggered, f"<b>{team_name}</b>\n" + "\n".join(active_promos)
 
+# Top-level script entrypoint: evaluate both teams and send email if needed
 def main():
     all_triggered = []
     all_sections = []
