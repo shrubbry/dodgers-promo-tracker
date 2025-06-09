@@ -1,7 +1,7 @@
 import requests
 import datetime
 import os
-from email_sender import send_email  # assumes working Brevo integration
+from utils import send_email  # assumes working Brevo integration
 
 TODAY = datetime.date.today()
 MLB_API_BASE = "https://statsapi.mlb.com/api/v1"
