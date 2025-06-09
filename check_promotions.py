@@ -87,9 +87,11 @@ def evaluate_promos(team_name, team_id):
     players = boxscore['teams']['home' if is_home else 'away']['players']
     steals = sum(p.get('stats', {}).get('batting', {}).get('stolenBases', 0) for p in players.values())
 
-    # Opponent pitching stats used to total strikeouts
-    pitching = boxscore['teams']['home' if not is_home else 'away']['players']
+    # Team pitching stats used to total strikeouts (Jack in the Box promo)
+    pitching = boxscore['teams']['home' if is_home else 'away']['players']
     strikeouts = sum(p.get('stats', {}).get('pitching', {}).get('strikeOuts', 0) for p in pitching.values())
+
+    print(f"[DEBUG] {team_name} game summary: runs={runs}, steals={steals}, strikeouts={strikeouts}, won={won}, home={is_home}")
 
     summary = {
         'home': is_home,
