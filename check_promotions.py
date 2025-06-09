@@ -1,9 +1,14 @@
 import requests
 import datetime
 import os
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from utils import send_email  # assumes working Brevo integration
+import importlib.util
+
+# Dynamically load utils.send_email
+script_dir = os.path.dirname(os.path.abspath(__file__))
+utils_path = os.path.join(script_dir, 'utils.py')
+spec = importlib.util.spec_from_file_location("utils", utils_path)
+utils = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(utils)
 
 TODAY = datetime.date.today()
 MLB_API_BASE = "https://statsapi.mlb.com/api/v1"
@@ -88,7 +93,7 @@ def main():
 
     subject = f"{len(all_triggered)} food promos active today!"
     body = f"<b>{TODAY.strftime('%A, %B %d')}</b><br><br>" + "<br><br>".join(all_sections)
-    send_email(subject, body)
+    utils.send_email(subject, body)
 
 if __name__ == "__main__":
     main()
