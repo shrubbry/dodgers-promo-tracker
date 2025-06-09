@@ -1,14 +1,6 @@
 import requests
 import datetime
 import os
-import importlib.util
-
-# Dynamically load utils.send_email
-script_dir = os.path.dirname(os.path.abspath(__file__))
-utils_path = os.path.join(script_dir, 'utils.py')
-spec = importlib.util.spec_from_file_location("utils", utils_path)
-utils = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(utils)
 
 TODAY = datetime.date.today()
 MLB_API_BASE = "https://statsapi.mlb.com/api/v1"
@@ -30,6 +22,32 @@ PROMOS = {
         {"name": "Del Taco", "condition": lambda game: game['home'] and game['runs'] >= 5},
     ],
 }
+
+def send_email(subject, html_content):
+    api_key = os.environ.get("BREVO_API_KEY")
+    if not api_key:
+        raise RuntimeError("Missing BREVO_API_KEY")
+
+    payload = {
+        "sender": {"name": "Dodgers Promo Tracker", "email": "your_email@example.com"},
+        "to": [{"email": "your_subscriber@example.com"}],
+        "subject": subject,
+        "htmlContent": f"<html><body>{html_content}</body></html>",
+    }
+
+    response = requests.post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json",
+        },
+        json=payload,
+    )
+
+    if not response.ok:
+        raise RuntimeError(f"Email failed: {response.status_code} - {response.text}")
+    print("Email sent.")
 
 def fetch_team_games(team_id):
     url = f"{MLB_API_BASE}/schedule?sportId=1&teamId={team_id}&date={TODAY}"
@@ -93,7 +111,7 @@ def main():
 
     subject = f"{len(all_triggered)} food promos active today!"
     body = f"<b>{TODAY.strftime('%A, %B %d')}</b><br><br>" + "<br><br>".join(all_sections)
-    utils.send_email(subject, body)
+    send_email(subject, body)
 
 if __name__ == "__main__":
     main()
