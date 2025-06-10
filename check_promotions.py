@@ -92,6 +92,11 @@ def evaluate_promos(team_name, team_id):
     print(f"[DEBUG] Sample player stats: {json.dumps(next(iter(players.values())).get('stats', {}), indent=2)}")
 
     for pid, p in players.items():
+        stat_block = p.get('stats', {})
+        if stat_block:
+            print(f"[DEBUG] Player {pid} has stats: {json.dumps(stat_block, indent=2)}")
+
+    for pid, p in players.items():
         if 'batting' in p.get('stats', {}) and p['stats']['batting'].get('stolenBases', 0) > 0:
             print(f"[DEBUG] Player {pid} stole {p['stats']['batting']['stolenBases']} base(s)")
         if 'pitching' in p.get('stats', {}) and p['stats']['pitching'].get('strikeOuts', 0) > 0:
