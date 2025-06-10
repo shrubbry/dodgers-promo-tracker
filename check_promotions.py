@@ -99,7 +99,7 @@ def evaluate_promos(team_name, team_id):
     # Player stats used for steals and strikeouts
     boxscore_team_key = 'home' if boxscore['teams']['home']['team']['id'] == team_id else 'away'
     players = boxscore['teams'][boxscore_team_key]['players']
-    import json
+
     print(f"[DEBUG] Sample player stats: {json.dumps(next(iter(players.values())).get('stats', {}), indent=2)}")
 
     for pid, p in players.items():
