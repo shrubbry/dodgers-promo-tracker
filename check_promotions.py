@@ -90,6 +90,12 @@ def evaluate_promos(team_name, team_id):
     players = boxscore['teams'][boxscore_team_key]['players']
     import json
     print(f"[DEBUG] Sample player stats: {json.dumps(next(iter(players.values())).get('stats', {}), indent=2)}")
+
+    for pid, p in players.items():
+        if 'batting' in p.get('stats', {}) and p['stats']['batting'].get('stolenBases', 0) > 0:
+            print(f"[DEBUG] Player {pid} stole {p['stats']['batting']['stolenBases']} base(s)")
+        if 'pitching' in p.get('stats', {}) and p['stats']['pitching'].get('strikeOuts', 0) > 0:
+            print(f"[DEBUG] Player {pid} struck out {p['stats']['pitching']['strikeOuts']} batter(s)")
     steals = sum(
         p['stats']['batting']['stolenBases']
         for p in players.values()
