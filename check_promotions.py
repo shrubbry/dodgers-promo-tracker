@@ -72,11 +72,13 @@ def evaluate_promos(team_name, team_id):
     if not games:
         return [], f"{team_name}: No game or data unavailable"
 
-        game_data = None
+    game_data = None
     for g in games[0]['games']:
         if g['status']['detailedState'] == 'Final':
             game_data = g
             break
+    assert game_data is not None, f"No completed game found in schedule data: {json.dumps(games[0]['games'], indent=2)}"
+
     if not game_data:
         return [], f"{team_name}: No completed game found today"
 
