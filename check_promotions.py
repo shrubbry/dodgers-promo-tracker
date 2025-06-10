@@ -83,6 +83,7 @@ def evaluate_promos(team_name, team_id):
     if won is None:
         won = team_info.get('score', 0) > opp_info.get('score', 0)  # fallback comparison if 'isWinner' is missing
     game_id = game_data['gamePk']
+    print(f"[DEBUG] Using game ID: {game_id} | Status: {game_data['status']['detailedState']}")
 
     boxscore = fetch_boxscore(game_id)
     # Player stats used for steals and strikeouts
