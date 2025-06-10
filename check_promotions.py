@@ -72,7 +72,14 @@ def evaluate_promos(team_name, team_id):
     if not games:
         return [], f"{team_name}: No game or data unavailable"
 
-    game_data = games[0]['games'][0]
+        game_data = None
+    for g in games[0]['games']:
+        if g['status']['detailedState'] == 'Final':
+            game_data = g
+            break
+    if not game_data:
+        return [], f"{team_name}: No completed game found today"
+
     is_home = game_data['teams']['home']['team']['id'] == team_id
     team_info = game_data['teams']['home'] if is_home else game_data['teams']['away']
     opp_info = game_data['teams']['away'] if is_home else game_data['teams']['home']
