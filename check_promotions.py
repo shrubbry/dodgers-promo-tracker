@@ -1,6 +1,7 @@
 import requests
 import datetime
 import os
+import json
 
 # Get today's date for querying MLB API
 TODAY = datetime.date.today()
