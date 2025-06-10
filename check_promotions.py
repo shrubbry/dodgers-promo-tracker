@@ -77,7 +77,7 @@ def evaluate_promos(team_name, team_id):
     team_info = game_data['teams']['home'] if is_home else game_data['teams']['away']
     opp_info = game_data['teams']['away'] if is_home else game_data['teams']['home']
 
-    runs = team_info['score']
+    runs = team_info.get('score', 0)  # fallback in case 'score' is missing
     # Some MLB schedule responses omit 'isWinner' even after games end
     won = team_info.get('isWinner', team_info['score'] > opp_info['score'])
     game_id = game_data['gamePk']
