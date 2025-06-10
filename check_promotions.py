@@ -79,7 +79,9 @@ def evaluate_promos(team_name, team_id):
 
     runs = team_info.get('score', 0)  # fallback in case 'score' is missing
     # Some MLB schedule responses omit 'isWinner' even after games end
-    won = team_info.get('isWinner', team_info['score'] > opp_info['score'])
+    won = team_info.get('isWinner')
+    if won is None:
+        won = team_info.get('score', 0) > opp_info.get('score', 0)  # fallback comparison if 'isWinner' is missing
     game_id = game_data['gamePk']
 
     boxscore = fetch_boxscore(game_id)
